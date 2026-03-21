@@ -3,158 +3,152 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bitcoin Historical Volatility Index (.BVOL) | HerdVibe</title>
+<title>비트코인 역사적 변동성 (.BVOL) | HerdVibe</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
 <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.1/kakao.min.js" crossorigin="anonymous" async></script>
 <style>
   :root {
     --bg: #0a0a0a;
     --surface: #111111;
     --border: #222222;
+    --border-strong: rgba(255,255,255,0.12);
     --text: #e0e0e0;
     --text-dim: #888888;
+    --text-muted: #555;
     --accent: #00d4aa;
     --accent-dim: rgba(0,212,170,0.15);
     --btc-color: #f7931a;
+    --primary: #3b82f6;
+    --primary-light: #60a5fa;
+    --primary-glow: rgba(59,130,246,0.12);
+    --up: #22c55e;
+    --elevated: #1a1a1a;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.5);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,.7);
+    --radius-md: 10px;
+    --transition-fast: 150ms ease;
   }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background: var(--bg); color: var(--text);
-    font-family: 'Noto Sans KR', sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  .container { max-width:1200px; margin:0 auto; padding:20px 16px 40px; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;-webkit-font-smoothing:antialiased}
+  .container{max-width:1200px;margin:0 auto;padding:20px 16px 40px}
 
-  /* Header */
-  .header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
-  .header-left h1 { font-size:20px; font-weight:700; letter-spacing:-0.02em; }
-  .header-left h1 span { color:var(--accent); font-family:'JetBrains Mono',monospace; font-weight:500; }
-  .header-left .subtitle { font-size:13px; color:var(--text-dim); margin-top:4px; font-family:'JetBrains Mono',monospace; }
-  .header-right { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  /* Header — centered */
+  .header{text-align:center;margin-bottom:20px}
+  .header h1{font-size:20px;font-weight:700;letter-spacing:-0.02em}
+  .header h1 span{color:var(--accent);font-family:'JetBrains Mono',monospace;font-weight:500}
+  .header .subtitle{font-size:13px;color:var(--text-dim);margin-top:4px;font-family:'JetBrains Mono',monospace}
 
-  /* Buttons */
-  .btn-group { display:flex; background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
-  .btn-group button {
-    padding:8px 16px; font-size:13px; font-family:'Noto Sans KR',sans-serif; font-weight:500;
-    border:none; background:transparent; color:var(--text-dim); cursor:pointer; transition:all 0.2s;
-  }
-  .btn-group button:hover { color:var(--text); }
-  .btn-group button.active { background:var(--accent); color:#0a0a0a; }
-  .btn-group button+button { border-left:1px solid var(--border); }
-  .range-group button { padding:8px 12px; font-size:12px; font-family:'JetBrains Mono',monospace; }
-  .range-group button.active { color:var(--accent); background:var(--accent-dim); }
+  /* Controls — centered */
+  .controls{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .btn-group{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .btn-group button{padding:8px 16px;font-size:13px;font-family:'Noto Sans KR',sans-serif;font-weight:500;border:none;background:transparent;color:var(--text-dim);cursor:pointer;transition:all .2s}
+  .btn-group button:hover{color:var(--text)}
+  .btn-group button.active{background:var(--accent);color:#0a0a0a}
+  .btn-group button+button{border-left:1px solid var(--border)}
+  .range-group button{padding:8px 12px;font-size:12px;font-family:'JetBrains Mono',monospace}
+  .range-group button.active{color:var(--accent);background:var(--accent-dim)}
+  .zoom-reset-btn{padding:8px 14px;font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:500;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-dim);cursor:pointer;transition:all .2s;display:none}
+  .zoom-reset-btn:hover{color:var(--accent);border-color:var(--accent)}
+  .zoom-reset-btn.visible{display:block}
 
-  .zoom-reset-btn {
-    padding:8px 14px; font-size:12px; font-family:'JetBrains Mono',monospace; font-weight:500;
-    border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text-dim);
-    cursor:pointer; transition:all 0.2s; display:none;
-  }
-  .zoom-reset-btn:hover { color:var(--accent); border-color:var(--accent); }
-  .zoom-reset-btn.visible { display:block; }
-
-  /* Stats */
-  .stats-bar { display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
-  .stat-item { display:flex; align-items:center; gap:8px; padding:10px 16px; background:var(--surface); border:1px solid var(--border); border-radius:8px; }
-  .stat-label { font-size:12px; color:var(--text-dim); }
-  .stat-value { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:500; }
-  .stat-value.btc-c { color:var(--btc-color); }
-  .stat-value.bvol-c { color:var(--accent); }
+  /* Stats — centered */
+  .stats-bar{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;justify-content:center}
+  .stat-item{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+  .stat-label{font-size:12px;color:var(--text-dim)}
+  .stat-value{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:500}
+  .stat-value.btc-c{color:var(--btc-color)}
+  .stat-value.bvol-c{color:var(--accent)}
 
   /* Chart wrapper */
-  .chart-wrapper { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; position:relative; }
-  .chart-panel { position:relative; padding:8px 12px; }
-  .chart-panel.btc-panel { height:340px; }
-  .chart-panel.bvol-panel { height:200px; border-top:1px solid var(--border); }
-  .panel-label {
-    position:absolute; top:10px; left:14px; font-size:11px;
-    font-family:'JetBrains Mono',monospace; font-weight:500; color:var(--text-dim);
-    z-index:10; display:flex; align-items:center; gap:6px; pointer-events:none;
-  }
-  .dot { width:8px; height:8px; border-radius:50%; }
-  .dot.btc { background:var(--btc-color); }
-  .dot.bvol { background:var(--accent); }
-
-  .log-toggle { position:absolute; top:8px; right:14px; z-index:10; display:flex; align-items:center; gap:6px; }
-  .log-toggle label { font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--text-dim); cursor:pointer; }
-  .log-toggle input { accent-color:var(--accent); cursor:pointer; }
-
-  .zoom-hint {
-    position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
-    font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--text-dim);
-    opacity:0.5; pointer-events:none; z-index:10; transition:opacity 0.3s;
-  }
-  .chart-wrapper:hover .zoom-hint { opacity:0; }
+  .chart-wrapper{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:relative}
+  .chart-panel{position:relative;padding:8px 12px}
+  .chart-panel.btc-panel{height:340px}
+  .chart-panel.bvol-panel{height:200px;border-top:1px solid var(--border)}
+  .panel-label{position:absolute;top:10px;left:14px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--text-dim);z-index:10;display:flex;align-items:center;gap:6px;pointer-events:none}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .dot.btc{background:var(--btc-color)}
+  .dot.bvol{background:var(--accent)}
+  .log-toggle{position:absolute;top:8px;right:14px;z-index:10;display:flex;align-items:center;gap:6px}
+  .log-toggle label{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-dim);cursor:pointer}
+  .log-toggle input{accent-color:var(--accent);cursor:pointer}
+  .zoom-hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text-dim);opacity:.5;pointer-events:none;z-index:10;transition:opacity .3s}
+  .chart-wrapper:hover .zoom-hint{opacity:0}
 
   /* Loading */
-  .loading-overlay {
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    background:var(--surface); z-index:20; color:var(--text-dim);
-    font-family:'JetBrains Mono',monospace; font-size:13px; transition:opacity 0.3s;
-  }
-  .loading-overlay.hidden { opacity:0; pointer-events:none; }
-  .loading-overlay::after {
-    content:''; width:16px; height:16px; border:2px solid var(--border);
-    border-top-color:var(--accent); border-radius:50%; margin-left:10px; animation:spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--surface);z-index:20;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:13px;transition:opacity .3s}
+  .loading-overlay.hidden{opacity:0;pointer-events:none}
+  .loading-overlay::after{content:'';width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;margin-left:10px;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
 
   /* Crosshair info */
-  .crosshair-info {
-    position:absolute; top:10px; right:90px; z-index:15;
-    font-family:'JetBrains Mono',monospace; font-size:12px;
-    pointer-events:none; display:flex; gap:16px; opacity:0; transition:opacity 0.15s;
-  }
-  .crosshair-info.visible { opacity:1; }
-  .ci-date { color:var(--text-dim); }
-  .ci-btc { color:var(--btc-color); }
-  .ci-bvol { color:var(--accent); }
+  .crosshair-info{position:absolute;top:10px;right:90px;z-index:15;font-family:'JetBrains Mono',monospace;font-size:12px;pointer-events:none;display:flex;gap:16px;opacity:0;transition:opacity .15s}
+  .crosshair-info.visible{opacity:1}
+  .ci-date{color:var(--text-dim)}
+  .ci-btc{color:var(--btc-color)}
+  .ci-bvol{color:var(--accent)}
 
-  /* Guide */
-  .guide-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 24px; margin-top:16px; }
-  .guide-box summary { font-size:14px; font-weight:500; cursor:pointer; list-style:none; }
-  .guide-box summary::-webkit-details-marker { display:none; }
-  .guide-box summary::before { content:'▸'; margin-right:8px; color:var(--accent); font-family:'JetBrains Mono',monospace; }
-  .guide-box[open] summary::before { content:'▾'; }
-  .guide-content { margin-top:16px; font-size:13px; color:var(--text-dim); line-height:1.8; }
-  .guide-content strong { color:var(--text); font-weight:500; }
-  .guide-content code { font-family:'JetBrains Mono',monospace; color:var(--accent); font-size:12px; }
+  /* Share bar — from macro-1.html */
+  .share-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-top:1px solid var(--border);background:var(--surface);border-radius:0 0 12px 12px}
+  .share-bar-preview{font-size:.75rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%;line-height:1.4;font-family:'JetBrains Mono',monospace}
+  .share-bar-preview span{color:var(--text-dim);font-weight:500}
+  .share-bar-buttons{display:flex;align-items:center;gap:6px;flex-shrink:0}
+  .share-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:.75rem;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all var(--transition-fast);border:1px solid var(--border-strong);background:var(--surface);color:#999;white-space:nowrap}
+  .share-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm);color:var(--text)}
+  .share-btn svg{flex-shrink:0}
+  .share-btn--x:hover{border-color:#fff;color:#fff;background:#111}
+  .share-btn--kakao:hover{border-color:#FEE500;color:#191919;background:#FEE500}
+  .share-btn--tg:hover{border-color:#26A5E4;color:#fff;background:rgba(38,165,228,.15)}
+  .share-btn--copy:hover{border-color:var(--primary);color:var(--primary-light);background:var(--primary-glow)}
 
-  .footer { margin-top:20px; padding:12px 0; border-top:1px solid var(--border); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
-  .footer .source, .footer .updated { font-size:11px; color:var(--text-dim); font-family:'JetBrains Mono',monospace; line-height:1.6; }
+  /* Toast */
+  .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px}
+  .toast{background:var(--elevated);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:10px 18px;font-size:.788rem;color:var(--text);box-shadow:var(--shadow-lg);animation:toastIn .3s ease;border-left:3px solid var(--up)}
+  @keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
-  @media (max-width:768px) {
-    .container { padding:12px 10px 32px; }
-    .header { flex-direction:column; }
-    .header-right { width:100%; justify-content:flex-start; }
-    .chart-panel.btc-panel { height:260px; }
-    .chart-panel.bvol-panel { height:160px; }
-    .stats-bar { gap:8px; }
-    .stat-item { padding:8px 12px; }
-    .stat-value { font-size:13px; }
+  /* Footer */
+  .footer{margin-top:20px;padding:12px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .footer .source,.footer .updated{font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;line-height:1.6}
+
+  @media(max-width:768px){
+    .container{padding:12px 10px 32px}
+    .chart-panel.btc-panel{height:260px}
+    .chart-panel.bvol-panel{height:160px}
+    .stats-bar{gap:8px}
+    .stat-item{padding:8px 12px}
+    .stat-value{font-size:13px}
+    .share-bar{flex-direction:column;gap:10px;align-items:stretch}
+    .share-bar-preview{max-width:100%}
+    .share-bar-buttons{justify-content:center;flex-wrap:wrap}
+    .share-btn span.label-text{display:none}
+    .share-btn{padding:8px 10px}
   }
 </style>
 </head>
 <body>
 <div class="container">
+
+  <!-- Header (centered) -->
   <div class="header">
-    <div class="header-left">
-      <h1>Bitcoin Historical Volatility <span>.BVOL</span></h1>
-      <div class="subtitle">BitMEX 30-Day Annualized Historical Volatility Index</div>
-    </div>
-    <div class="header-right">
-      <div class="btn-group"><button class="active" data-tab="daily">일봉</button><button data-tab="weekly">주봉</button></div>
-      <div class="btn-group range-group">
-        <button data-range="365">1Y</button><button data-range="730">2Y</button>
-        <button class="active" data-range="1825">5Y</button><button data-range="0">ALL</button>
-      </div>
-      <button class="zoom-reset-btn" id="zoomResetBtn">↺ 리셋</button>
-    </div>
+    <h1>비트코인 역사적 변동성 <span>.BVOL</span></h1>
+    <div class="subtitle">BitMEX 30-Day Annualized Historical Volatility Index</div>
   </div>
 
+  <!-- Controls (centered) -->
+  <div class="controls">
+    <div class="btn-group"><button class="active" data-tab="daily">일봉</button><button data-tab="weekly">주봉</button></div>
+    <div class="btn-group range-group">
+      <button data-range="365">1Y</button><button data-range="730">2Y</button>
+      <button class="active" data-range="1825">5Y</button><button data-range="0">ALL</button>
+    </div>
+    <button class="zoom-reset-btn" id="zoomResetBtn">↺ 리셋</button>
+  </div>
+
+  <!-- Stats (centered) -->
   <div class="stats-bar">
     <div class="stat-item"><span class="stat-label">BTC</span><span class="stat-value btc-c" id="stat-btc">—</span></div>
     <div class="stat-item"><span class="stat-label">BVOL</span><span class="stat-value bvol-c" id="stat-bvol">—</span></div>
@@ -162,6 +156,7 @@
     <div class="stat-item"><span class="stat-label">BVOL 구간</span><span class="stat-value" id="stat-bvol-zone" style="font-size:12px">—</span></div>
   </div>
 
+  <!-- Charts -->
   <div class="chart-wrapper" id="chartWrapper">
     <div class="loading-overlay" id="loadingOverlay">데이터 로딩 중</div>
     <div class="crosshair-info" id="crosshairInfo">
@@ -181,55 +176,63 @@
     <div class="zoom-hint">스크롤: 줌 · 드래그: 패닝 · 더블클릭: 리셋</div>
   </div>
 
-  <details class="guide-box">
-    <summary>BVOL 지표 해석 가이드</summary>
-    <div class="guide-content">
-      <strong>BVOL (Bitcoin Historical Volatility Index)</strong>은 BitMEX에서 산출하는 비트코인 30일 역사적 변동성 지수입니다.
-      S&P 500의 VIX와 유사한 역할을 합니다.<br><br>
-      <strong>산출 공식:</strong> <code>.BVOL = Stdev(Ln(P1/P0), ..., Ln(P30/P29)) × √365</code><br>
-      매일 11:30~12:00 UTC 구간의 1분 간격 TWAP(시간가중평균가격)을 사용합니다.<br><br>
-      <strong>해석:</strong><br>
-      · BVOL이 <strong>극도로 낮을 때</strong> → 변동성 압축 구간. 큰 방향성 움직임 직전일 가능성<br>
-      · BVOL이 <strong>급등할 때</strong> → 시장 패닉 또는 급격한 가격 변동 구간<br>
-      · BTC 가격 <strong>저점</strong>에서 BVOL이 고점을 찍고 하락 전환 → 바닥 시그널<br>
-      · BTC 가격 <strong>고점</strong>에서 BVOL이 저점 → 상승 종료 가능성<br><br>
-      <strong>핵심:</strong> BVOL은 방향이 아닌 <strong>변동성의 크기</strong>를 측정합니다.
+  <!-- Share bar (macro-1 style) -->
+  <div class="share-bar" style="border-radius:12px;margin-top:12px;border-top:none;border:1px solid var(--border)">
+    <div class="share-bar-preview"><span>비트코인 역사적 변동성 (.BVOL)</span> — herdvibe.com</div>
+    <div class="share-bar-buttons">
+      <button class="share-btn share-btn--x" onclick="doShare('twitter')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span class="label-text">트위터</span></button>
+      <button class="share-btn share-btn--kakao" onclick="doShare('kakao')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.724 1.8 5.112 4.508 6.458l-1.148 4.265a.5.5 0 0 0 .764.533l4.94-3.26c.304.02.612.03.936.03 5.523 0 10-3.462 10-7.735C22 6.463 17.523 3 12 3z"/></svg><span class="label-text">카카오톡</span></button>
+      <button class="share-btn share-btn--tg" onclick="doShare('telegram')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg><span class="label-text">텔레그램</span></button>
+      <button class="share-btn" onclick="doShare('instagram',this)" style="border-color:var(--border-strong)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg><span class="label-text">인스타</span></button>
+      <button class="share-btn share-btn--copy" onclick="doShare('link',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span class="label-text">링크 복사</span></button>
     </div>
-  </details>
+  </div>
 
+  <!-- Footer -->
   <div class="footer">
     <div class="source">BTC: BTC_USD.csv + BitMEX XBTUSD<br>BVOL: BitMEX .BVOL (30-day annualized)</div>
     <div class="updated" id="updatedAt">—</div>
   </div>
+
 </div>
 
 <script>
 /* ═══════════════════════════════════════════════
-   STATE
+   SHARE (macro-1 style)
    ═══════════════════════════════════════════════ */
-let rawData = null, btcChart = null, bvolChart = null;
-let currentTab = 'daily', currentRange = 1825, isLogScale = true;
-let isSyncing = false;
-let filteredCache = { dates:[], btc:[], bvol:[] };
+var SHARE_URL='https://herdvibe.com/133';
+
+function ensureKakao(){try{if(typeof Kakao!=='undefined'&&!Kakao.isInitialized())Kakao.init('a43ed7b39fac35458f4f9df925a279b5');return typeof Kakao!=='undefined'&&Kakao.isInitialized();}catch(e){return false;}}
+
+function kakaoShare(){if(!ensureKakao()){copyToClipboard(SHARE_URL);toast('링크 복사완료! 카카오톡에 붙여넣기 하세요');return;}try{Kakao.Share.sendDefault({objectType:'feed',content:{title:'비트코인 역사적 변동성 (.BVOL)',description:'BTC 가격과 BVOL 30일 연간화 변동성 지수 실시간 분석',imageUrl:'https://raw.githubusercontent.com/kittycapital/kittycapital.github.io/main/assets/herdvibe-og.png',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},buttons:[{title:'대시보드 보기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}]});}catch(e){copyToClipboard(SHARE_URL);toast('링크 복사완료! 카카오톡에 붙여넣기 하세요');}}
+
+function copyToClipboard(text){try{window.parent.postMessage({type:'clipboard',text:text},'*');}catch(e){}}
+
+function flashCopied(btn){if(!btn)return;var orig=btn.innerHTML;btn.style.background='#22c55e';btn.style.color='#fff';btn.style.borderColor='#22c55e';var hasLabel=btn.querySelector('.label-text');btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>'+(hasLabel?'<span class="label-text" style="color:#fff">복사됨!</span>':'');setTimeout(function(){btn.style.background='';btn.style.color='';btn.style.borderColor='';btn.innerHTML=orig;},2000);}
+
+function doShare(p,btn){var u=SHARE_URL;var t=encodeURIComponent('비트코인 역사적 변동성 (.BVOL) | herdvibe.com');var eu=encodeURIComponent(u);switch(p){case'twitter':window.open('https://twitter.com/intent/tweet?text='+t+'&url='+eu,'_blank');break;case'telegram':window.open('https://t.me/share/url?url='+eu+'&text='+t,'_blank');break;case'kakao':kakaoShare();break;case'instagram':copyToClipboard(u);flashCopied(btn);toast('링크 복사완료! 인스타그램에 붙여넣기 하세요');break;case'link':copyToClipboard(u);flashCopied(btn);toast('링크가 복사되었습니다 ✓');break;}}
+
+function toast(msg){var c=document.querySelector('.toast-wrap');if(!c){c=document.createElement('div');c.className='toast-wrap';document.body.appendChild(c);}var t=document.createElement('div');t.className='toast';t.textContent=msg;c.appendChild(t);setTimeout(function(){t.style.opacity='0';t.style.transform='translateY(12px)';t.style.transition='.3s';setTimeout(function(){t.remove()},300)},3000);}
 
 /* ═══════════════════════════════════════════════
-   CROSSHAIR PLUGIN — vertical dashed line
+   STATE
    ═══════════════════════════════════════════════ */
-const crosshairPlugin = {
-  id: 'crosshairLine',
-  afterDraw(chart) {
-    const x = chart._crosshairX;
-    if (x == null) return;
-    const { ctx, chartArea: { top, bottom } } = chart;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(x, top);
-    ctx.lineTo(x, bottom);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-    ctx.setLineDash([4, 3]);
-    ctx.stroke();
-    ctx.restore();
+var rawData=null,btcChart=null,bvolChart=null;
+var currentTab='daily',currentRange=1825,isLogScale=true;
+var isSyncing=false;
+var filteredCache={dates:[],btc:[],bvol:[]};
+
+/* ═══════════════════════════════════════════════
+   CROSSHAIR PLUGIN
+   ═══════════════════════════════════════════════ */
+var crosshairPlugin={
+  id:'crosshairLine',
+  afterDraw:function(chart){
+    var x=chart._crosshairX;
+    if(x==null)return;
+    var ctx=chart.ctx,top=chart.chartArea.top,bottom=chart.chartArea.bottom;
+    ctx.save();ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,bottom);
+    ctx.lineWidth=1;ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.setLineDash([4,3]);ctx.stroke();ctx.restore();
   }
 };
 Chart.register(crosshairPlugin);
@@ -237,41 +240,32 @@ Chart.register(crosshairPlugin);
 /* ═══════════════════════════════════════════════
    DATA
    ═══════════════════════════════════════════════ */
-async function loadData() {
-  try {
-    rawData = await (await fetch('./data/bvol_data.json')).json();
+async function loadData(){
+  try{
+    rawData=await(await fetch('./data/bvol_data.json')).json();
     document.getElementById('loadingOverlay').classList.add('hidden');
-    updateStats();
-    renderCharts();
-  } catch (e) {
-    document.getElementById('loadingOverlay').textContent = '데이터를 불러올 수 없습니다';
-  }
+    updateStats();renderCharts();
+  }catch(e){document.getElementById('loadingOverlay').textContent='데이터를 불러올 수 없습니다';}
 }
 
-function getFilteredData() {
-  if (!rawData) return { dates:[], btc:[], bvol:[] };
-  let { dates, btc_close: btc, bvol } = rawData;
-
-  if (currentRange > 0) {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - currentRange);
-    const cs = cutoff.toISOString().slice(0,10);
-    const si = dates.findIndex(d => d >= cs);
-    if (si > 0) { dates = dates.slice(si); btc = btc.slice(si); bvol = bvol.slice(si); }
+function getFilteredData(){
+  if(!rawData)return{dates:[],btc:[],bvol:[]};
+  var dates=rawData.dates,btc=rawData.btc_close,bvol=rawData.bvol;
+  if(currentRange>0){
+    var cutoff=new Date();cutoff.setDate(cutoff.getDate()-currentRange);
+    var cs=cutoff.toISOString().slice(0,10);
+    var si=dates.findIndex(function(d){return d>=cs;});
+    if(si>0){dates=dates.slice(si);btc=btc.slice(si);bvol=bvol.slice(si);}
   }
-
-  return currentTab === 'weekly' ? aggregateWeekly(dates, btc, bvol) : { dates, btc, bvol };
+  return currentTab==='weekly'?aggregateWeekly(dates,btc,bvol):{dates:dates,btc:btc,bvol:bvol};
 }
 
-function aggregateWeekly(dates, btc, bvol) {
-  const w = { dates:[], btc:[], bvol:[] };
-  let wb = null, wv = null;
-  for (let i = 0; i < dates.length; i++) {
-    if (btc[i] != null) wb = btc[i];
-    if (bvol[i] != null) wv = bvol[i];
-    if (new Date(dates[i]).getDay() === 5 || i === dates.length - 1) {
-      w.dates.push(dates[i]); w.btc.push(wb); w.bvol.push(wv);
-      wb = null; wv = null;
+function aggregateWeekly(dates,btc,bvol){
+  var w={dates:[],btc:[],bvol:[]};var wb=null,wv=null;
+  for(var i=0;i<dates.length;i++){
+    if(btc[i]!=null)wb=btc[i];if(bvol[i]!=null)wv=bvol[i];
+    if(new Date(dates[i]).getDay()===5||i===dates.length-1){
+      w.dates.push(dates[i]);w.btc.push(wb);w.bvol.push(wv);wb=null;wv=null;
     }
   }
   return w;
@@ -280,284 +274,171 @@ function aggregateWeekly(dates, btc, bvol) {
 /* ═══════════════════════════════════════════════
    STATS
    ═══════════════════════════════════════════════ */
-function updateStats() {
-  if (!rawData) return;
-  const { btc_close: btc, bvol } = rawData;
-
-  let lb = null, lv = null;
-  for (let i = btc.length - 1; i >= 0; i--) {
-    if (lb == null && btc[i] != null) lb = btc[i];
-    if (lv == null && bvol[i] != null) lv = bvol[i];
-    if (lb != null && lv != null) break;
+function updateStats(){
+  if(!rawData)return;
+  var btc=rawData.btc_close,bvol=rawData.bvol;
+  var lb=null,lv=null;
+  for(var i=btc.length-1;i>=0;i--){
+    if(lb==null&&btc[i]!=null)lb=btc[i];
+    if(lv==null&&bvol[i]!=null)lv=bvol[i];
+    if(lb!=null&&lv!=null)break;
   }
-
-  document.getElementById('stat-btc').textContent = lb ? '$' + lb.toLocaleString('en-US',{maximumFractionDigits:0}) : '—';
-  document.getElementById('stat-bvol').textContent = lv != null ? lv.toFixed(2)+'%' : '—';
-
-  const r = bvol.slice(-365).filter(v => v != null);
-  const avg = r.length ? r.reduce((a,b) => a+b, 0) / r.length : 0;
-  document.getElementById('stat-bvol-avg').textContent = avg.toFixed(2) + '%';
-
-  const z = document.getElementById('stat-bvol-zone');
-  if (lv != null) {
-    if (lv < 30) { z.textContent='🟢 저변동'; z.style.color='#00d4aa'; }
-    else if (lv < 60) { z.textContent='🟡 보통'; z.style.color='#ffd700'; }
-    else if (lv < 90) { z.textContent='🟠 고변동'; z.style.color='#ff8c00'; }
-    else { z.textContent='🔴 극단적'; z.style.color='#ff4976'; }
+  document.getElementById('stat-btc').textContent=lb?'$'+lb.toLocaleString('en-US',{maximumFractionDigits:0}):'—';
+  document.getElementById('stat-bvol').textContent=lv!=null?lv.toFixed(2)+'%':'—';
+  var r=bvol.slice(-365).filter(function(v){return v!=null;});
+  var avg=r.length?r.reduce(function(a,b){return a+b;},0)/r.length:0;
+  document.getElementById('stat-bvol-avg').textContent=avg.toFixed(2)+'%';
+  var z=document.getElementById('stat-bvol-zone');
+  if(lv!=null){
+    if(lv<30){z.textContent='🟢 저변동';z.style.color='#00d4aa';}
+    else if(lv<60){z.textContent='🟡 보통';z.style.color='#ffd700';}
+    else if(lv<90){z.textContent='🟠 고변동';z.style.color='#ff8c00';}
+    else{z.textContent='🔴 극단적';z.style.color='#ff4976';}
   }
-
-  if (rawData.updated_at) {
-    const d = new Date(rawData.updated_at);
-    document.getElementById('updatedAt').textContent =
-      `업데이트: ${d.toLocaleDateString('ko-KR')} ${d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}`;
+  if(rawData.updated_at){
+    var d=new Date(rawData.updated_at);
+    document.getElementById('updatedAt').textContent='업데이트: '+d.toLocaleDateString('ko-KR')+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
   }
 }
 
 /* ═══════════════════════════════════════════════
-   ZOOM SYNC — the core sync logic
+   ZOOM SYNC
    ═══════════════════════════════════════════════ */
-function syncXAxis(source, target) {
-  if (isSyncing || !source || !target) return;
-  isSyncing = true;
-  const sx = source.scales.x;
-  target.options.scales.x.min = sx.min;
-  target.options.scales.x.max = sx.max;
-  target.update('none');
-  isSyncing = false;
+function syncXAxis(source,target){
+  if(isSyncing||!source||!target)return;
+  isSyncing=true;
+  var sx=source.scales.x;
+  target.options.scales.x.min=sx.min;target.options.scales.x.max=sx.max;
+  target.update('none');isSyncing=false;
 }
-
-function showResetBtn() { document.getElementById('zoomResetBtn').classList.add('visible'); }
-function hideResetBtn() { document.getElementById('zoomResetBtn').classList.remove('visible'); }
-
-function zoomOpts(getOther) {
-  return {
-    zoom: {
-      wheel: { enabled: true, speed: 0.08 },
-      pinch: { enabled: true },
-      mode: 'x',
-      onZoom({ chart }) { showResetBtn(); syncXAxis(chart, getOther()); }
-    },
-    pan: {
-      enabled: true,
-      mode: 'x',
-      onPan({ chart }) { showResetBtn(); syncXAxis(chart, getOther()); }
-    },
-    limits: { x: { minRange: 7 * 86400000 } }
-  };
-}
-
-function resetAllZoom() {
-  if (btcChart) btcChart.resetZoom('none');
-  if (bvolChart) bvolChart.resetZoom('none');
+function showResetBtn(){document.getElementById('zoomResetBtn').classList.add('visible');}
+function hideResetBtn(){document.getElementById('zoomResetBtn').classList.remove('visible');}
+function zoomOpts(getOther){return{
+  zoom:{wheel:{enabled:true,speed:0.08},pinch:{enabled:true},mode:'x',onZoom:function(ctx){showResetBtn();syncXAxis(ctx.chart,getOther());}},
+  pan:{enabled:true,mode:'x',onPan:function(ctx){showResetBtn();syncXAxis(ctx.chart,getOther());}},
+  limits:{x:{minRange:7*86400000}}
+};}
+function resetAllZoom(){
+  if(btcChart)btcChart.resetZoom('none');
+  if(bvolChart)bvolChart.resetZoom('none');
   hideResetBtn();
 }
 
 /* ═══════════════════════════════════════════════
    CROSSHAIR HOVER SYNC
    ═══════════════════════════════════════════════ */
-function handleHover(src, tgt, e) {
-  const rect = src.canvas.getBoundingClientRect();
-  const cx = (e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX));
-  if (cx == null) return;
-
-  const canvasX = cx - rect.left;
-  const { left, right } = src.chartArea;
-  if (canvasX < left || canvasX > right) { clearCrosshair(); return; }
-
-  src._crosshairX = canvasX;
-  src.draw();
-
-  if (tgt) {
-    const pct = (canvasX - left) / (right - left);
-    const ta = tgt.chartArea;
-    tgt._crosshairX = ta.left + pct * (ta.right - ta.left);
-    tgt.draw();
-  }
-
+function handleHover(src,tgt,e){
+  var rect=src.canvas.getBoundingClientRect();
+  var cx=e.clientX||(e.touches&&e.touches[0]&&e.touches[0].clientX);
+  if(cx==null)return;
+  var canvasX=cx-rect.left;
+  var left=src.chartArea.left,right=src.chartArea.right;
+  if(canvasX<left||canvasX>right){clearCrosshair();return;}
+  src._crosshairX=canvasX;src.draw();
+  if(tgt){var pct=(canvasX-left)/(right-left);var ta=tgt.chartArea;tgt._crosshairX=ta.left+pct*(ta.right-ta.left);tgt.draw();}
   updateCrosshairInfo(src.scales.x.getValueForPixel(canvasX));
 }
-
-function clearCrosshair() {
-  [btcChart, bvolChart].forEach(c => { if (c) { c._crosshairX = null; c.draw(); } });
+function clearCrosshair(){
+  [btcChart,bvolChart].forEach(function(c){if(c){c._crosshairX=null;c.draw();}});
   document.getElementById('crosshairInfo').classList.remove('visible');
 }
-
-function updateCrosshairInfo(ts) {
-  const d = filteredCache.dates;
-  if (!d.length) return;
-  const target = new Date(ts).toISOString().slice(0,10);
-
-  let lo = 0, hi = d.length - 1, n = 0;
-  while (lo <= hi) { const m = (lo+hi)>>1; if (d[m] <= target) { n = m; lo = m+1; } else hi = m-1; }
-
-  const bv = filteredCache.btc[n], vv = filteredCache.bvol[n];
-  document.getElementById('ciDate').textContent = d[n];
-  document.getElementById('ciBtc').textContent = bv != null ? 'BTC $'+bv.toLocaleString('en-US',{maximumFractionDigits:0}) : '';
-  document.getElementById('ciBvol').textContent = vv != null ? 'BVOL '+vv.toFixed(2)+'%' : '';
+function updateCrosshairInfo(ts){
+  var d=filteredCache.dates;if(!d.length)return;
+  var target=new Date(ts).toISOString().slice(0,10);
+  var lo=0,hi=d.length-1,n=0;
+  while(lo<=hi){var m=(lo+hi)>>1;if(d[m]<=target){n=m;lo=m+1;}else hi=m-1;}
+  var bv=filteredCache.btc[n],vv=filteredCache.bvol[n];
+  document.getElementById('ciDate').textContent=d[n];
+  document.getElementById('ciBtc').textContent=bv!=null?'BTC $'+bv.toLocaleString('en-US',{maximumFractionDigits:0}):'';
+  document.getElementById('ciBvol').textContent=vv!=null?'BVOL '+vv.toFixed(2)+'%':'';
   document.getElementById('crosshairInfo').classList.add('visible');
 }
 
 /* ═══════════════════════════════════════════════
-   RENDER CHARTS
+   RENDER
    ═══════════════════════════════════════════════ */
-function renderCharts() {
-  const data = getFilteredData();
-  filteredCache = data;
-  renderBtc(data);
-  renderBvol(data);
-  attachHover();
-  hideResetBtn();
+function renderCharts(){
+  var data=getFilteredData();filteredCache=data;
+  renderBtc(data);renderBvol(data);attachHover();hideResetBtn();
 }
-
-function renderBtc(data) {
-  const ctx = document.getElementById('btcChart').getContext('2d');
-  if (btcChart) btcChart.destroy();
-
-  const pts = data.dates.map((d,i) => ({x:d, y:data.btc[i]})).filter(p => p.y != null);
-  const grad = ctx.createLinearGradient(0,0,0,320);
-  grad.addColorStop(0,'rgba(247,147,26,0.12)');
-  grad.addColorStop(1,'rgba(247,147,26,0.0)');
-
-  const tu = currentRange <= 730 ? 'month' : 'year';
-
-  btcChart = new Chart(ctx, {
-    type: 'line',
-    data: { datasets: [{
-      data: pts, borderColor:'#f7931a', borderWidth:1.5,
-      backgroundColor: grad, fill:true, pointRadius:0, pointHitRadius:4, tension:0.1,
-    }]},
-    options: {
-      responsive:true, maintainAspectRatio:false, animation:false,
-      interaction: { mode:'index', intersect:false },
-      plugins: {
-        legend:{ display:false },
-        tooltip:{ enabled:false },
-        zoom: zoomOpts(() => bvolChart),
-      },
-      scales: {
-        x: {
-          type:'time',
-          time:{ unit:tu, displayFormats:{ month:'yyyy-MM', year:'yyyy' } },
-          grid:{ color:'rgba(255,255,255,0.04)', drawTicks:false },
-          ticks:{ font:{ family:"'JetBrains Mono',monospace", size:10 }, color:'#555', maxTicksLimit:10 },
-          border:{ display:false },
-        },
-        y: {
-          type: isLogScale ? 'logarithmic' : 'linear',
-          position:'right',
-          grid:{ color:'rgba(255,255,255,0.04)', drawTicks:false },
-          ticks:{
-            font:{ family:"'JetBrains Mono',monospace", size:10 }, color:'#555',
-            callback: v => v >= 1000 ? '$'+(v/1000).toFixed(0)+'K' : '$'+v,
-            maxTicksLimit:6,
-          },
-          border:{ display:false },
-        }
+function renderBtc(data){
+  var ctx=document.getElementById('btcChart').getContext('2d');
+  if(btcChart)btcChart.destroy();
+  var pts=[];for(var i=0;i<data.dates.length;i++){if(data.btc[i]!=null)pts.push({x:data.dates[i],y:data.btc[i]});}
+  var grad=ctx.createLinearGradient(0,0,0,320);
+  grad.addColorStop(0,'rgba(247,147,26,0.12)');grad.addColorStop(1,'rgba(247,147,26,0.0)');
+  var tu=currentRange<=730?'month':'year';
+  btcChart=new Chart(ctx,{type:'line',data:{datasets:[{data:pts,borderColor:'#f7931a',borderWidth:1.5,backgroundColor:grad,fill:true,pointRadius:0,pointHitRadius:4,tension:0.1}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{enabled:false},zoom:zoomOpts(function(){return bvolChart;})},
+      scales:{
+        x:{type:'time',time:{unit:tu,displayFormats:{month:'yyyy-MM',year:'yyyy'}},grid:{color:'rgba(255,255,255,0.04)',drawTicks:false},ticks:{font:{family:"'JetBrains Mono',monospace",size:10},color:'#555',maxTicksLimit:10},border:{display:false}},
+        y:{type:isLogScale?'logarithmic':'linear',position:'right',grid:{color:'rgba(255,255,255,0.04)',drawTicks:false},ticks:{font:{family:"'JetBrains Mono',monospace",size:10},color:'#555',callback:function(v){return v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v;},maxTicksLimit:6},border:{display:false}}
       }
     }
   });
 }
-
-function renderBvol(data) {
-  const ctx = document.getElementById('bvolChart').getContext('2d');
-  if (bvolChart) bvolChart.destroy();
-
-  const pts = data.dates.map((d,i) => ({x:d, y:data.bvol[i]})).filter(p => p.y != null);
-  const avg = pts.length ? pts.reduce((s,p) => s+p.y, 0) / pts.length : 0;
-  const grad = ctx.createLinearGradient(0,0,0,180);
-  grad.addColorStop(0,'rgba(0,212,170,0.15)');
-  grad.addColorStop(1,'rgba(0,212,170,0.0)');
-
-  const tu = currentRange <= 730 ? 'month' : 'year';
-
-  bvolChart = new Chart(ctx, {
-    type: 'line',
-    data: { datasets: [
-      {
-        label:'BVOL', data:pts, borderColor:'#00d4aa', borderWidth:1.5,
-        backgroundColor:grad, fill:true, pointRadius:0, pointHitRadius:4, tension:0.1,
-      },
-      {
-        label:'AVG', data:pts.map(p => ({x:p.x, y:avg})),
-        borderColor:'rgba(255,255,255,0.12)', borderWidth:1, borderDash:[4,4],
-        pointRadius:0, pointHitRadius:0, fill:false,
-      }
-    ]},
-    options: {
-      responsive:true, maintainAspectRatio:false, animation:false,
-      interaction: { mode:'index', intersect:false },
-      plugins: {
-        legend:{ display:false },
-        tooltip:{ enabled:false },
-        zoom: zoomOpts(() => btcChart),
-      },
-      scales: {
-        x: {
-          type:'time',
-          time:{ unit:tu, displayFormats:{ month:'yyyy-MM', year:'yyyy' } },
-          grid:{ color:'rgba(255,255,255,0.04)', drawTicks:false },
-          ticks:{ font:{ family:"'JetBrains Mono',monospace", size:10 }, color:'#555', maxTicksLimit:10 },
-          border:{ display:false },
-        },
-        y: {
-          position:'right', min:0,
-          grid:{ color:'rgba(255,255,255,0.04)', drawTicks:false },
-          ticks:{
-            font:{ family:"'JetBrains Mono',monospace", size:10 }, color:'#555',
-            callback: v => v+'%', maxTicksLimit:5,
-          },
-          border:{ display:false },
-        }
+function renderBvol(data){
+  var ctx=document.getElementById('bvolChart').getContext('2d');
+  if(bvolChart)bvolChart.destroy();
+  var pts=[];for(var i=0;i<data.dates.length;i++){if(data.bvol[i]!=null)pts.push({x:data.dates[i],y:data.bvol[i]});}
+  var avg=pts.length?pts.reduce(function(s,p){return s+p.y;},0)/pts.length:0;
+  var grad=ctx.createLinearGradient(0,0,0,180);
+  grad.addColorStop(0,'rgba(0,212,170,0.15)');grad.addColorStop(1,'rgba(0,212,170,0.0)');
+  var tu=currentRange<=730?'month':'year';
+  bvolChart=new Chart(ctx,{type:'line',data:{datasets:[
+    {label:'BVOL',data:pts,borderColor:'#00d4aa',borderWidth:1.5,backgroundColor:grad,fill:true,pointRadius:0,pointHitRadius:4,tension:0.1},
+    {label:'AVG',data:pts.map(function(p){return{x:p.x,y:avg};}),borderColor:'rgba(255,255,255,0.12)',borderWidth:1,borderDash:[4,4],pointRadius:0,pointHitRadius:0,fill:false}
+  ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{enabled:false},zoom:zoomOpts(function(){return btcChart;})},
+      scales:{
+        x:{type:'time',time:{unit:tu,displayFormats:{month:'yyyy-MM',year:'yyyy'}},grid:{color:'rgba(255,255,255,0.04)',drawTicks:false},ticks:{font:{family:"'JetBrains Mono',monospace",size:10},color:'#555',maxTicksLimit:10},border:{display:false}},
+        y:{position:'right',min:0,grid:{color:'rgba(255,255,255,0.04)',drawTicks:false},ticks:{font:{family:"'JetBrains Mono',monospace",size:10},color:'#555',callback:function(v){return v+'%';},maxTicksLimit:5},border:{display:false}}
       }
     }
   });
 }
 
 /* ═══════════════════════════════════════════════
-   HOVER LISTENERS
+   HOVER
    ═══════════════════════════════════════════════ */
-function attachHover() {
-  const wrapper = document.getElementById('chartWrapper');
-  const bc = document.getElementById('btcChart');
-  const vc = document.getElementById('bvolChart');
-
-  wrapper.onmousemove = e => {
-    const br = bc.getBoundingClientRect(), vr = vc.getBoundingClientRect();
-    if (e.clientY >= br.top && e.clientY <= br.bottom) handleHover(btcChart, bvolChart, e);
-    else if (e.clientY >= vr.top && e.clientY <= vr.bottom) handleHover(bvolChart, btcChart, e);
+function attachHover(){
+  var wrapper=document.getElementById('chartWrapper');
+  var bc=document.getElementById('btcChart'),vc=document.getElementById('bvolChart');
+  wrapper.onmousemove=function(e){
+    var br=bc.getBoundingClientRect(),vr=vc.getBoundingClientRect();
+    if(e.clientY>=br.top&&e.clientY<=br.bottom)handleHover(btcChart,bvolChart,e);
+    else if(e.clientY>=vr.top&&e.clientY<=vr.bottom)handleHover(bvolChart,btcChart,e);
   };
-  wrapper.ontouchmove = wrapper.onmousemove;
-  wrapper.onmouseleave = clearCrosshair;
+  wrapper.ontouchmove=wrapper.onmousemove;
+  wrapper.onmouseleave=clearCrosshair;
 }
 
 /* ═══════════════════════════════════════════════
-   EVENT LISTENERS
+   EVENTS
    ═══════════════════════════════════════════════ */
-document.querySelectorAll('[data-tab]').forEach(b => {
-  b.addEventListener('click', () => {
-    document.querySelectorAll('[data-tab]').forEach(x => x.classList.remove('active'));
-    b.classList.add('active'); currentTab = b.dataset.tab; renderCharts();
+document.querySelectorAll('[data-tab]').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('[data-tab]').forEach(function(x){x.classList.remove('active');});
+    b.classList.add('active');currentTab=b.dataset.tab;renderCharts();
   });
 });
-document.querySelectorAll('[data-range]').forEach(b => {
-  b.addEventListener('click', () => {
-    document.querySelectorAll('[data-range]').forEach(x => x.classList.remove('active'));
-    b.classList.add('active'); currentRange = parseInt(b.dataset.range); renderCharts();
+document.querySelectorAll('[data-range]').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('[data-range]').forEach(function(x){x.classList.remove('active');});
+    b.classList.add('active');currentRange=parseInt(b.dataset.range);renderCharts();
   });
 });
-document.getElementById('logScale').addEventListener('change', e => {
-  isLogScale = e.target.checked; renderCharts();
-});
-document.getElementById('zoomResetBtn').addEventListener('click', resetAllZoom);
-document.getElementById('chartWrapper').addEventListener('dblclick', resetAllZoom);
+document.getElementById('logScale').addEventListener('change',function(e){isLogScale=e.target.checked;renderCharts();});
+document.getElementById('zoomResetBtn').addEventListener('click',resetAllZoom);
+document.getElementById('chartWrapper').addEventListener('dblclick',resetAllZoom);
 
 /* ═══════════════════════════════════════════════
-   INIT + IFRAME HEIGHT
+   INIT
    ═══════════════════════════════════════════════ */
-function postHeight() {
-  window.parent.postMessage({ type:'herdvibe-height', height:document.documentElement.scrollHeight }, '*');
-}
-loadData().then(() => { postHeight(); window.addEventListener('resize', postHeight); });
+function postHeight(){window.parent.postMessage({type:'herdvibe-height',height:document.documentElement.scrollHeight},'*');}
+loadData().then(function(){postHeight();window.addEventListener('resize',postHeight);});
 </script>
 </body>
 </html>
