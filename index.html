@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitcoin Historical Volatility Index (.BVOL) | HerdVibe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #222222;
+    --text: #e0e0e0;
+    --text-dim: #888888;
+    --accent: #00d4aa;
+    --accent-dim: rgba(0, 212, 170, 0.15);
+    --btc-color: #f7931a;
+    --btc-dim: rgba(247, 147, 26, 0.08);
+    --bvol-up: #00d4aa;
+    --bvol-down: #ff4976;
+    --bvol-fill: rgba(0, 212, 170, 0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .header-left h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .header-left h1 span {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+  }
+
+  .header-left .subtitle {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Tab buttons */
+  .tab-group {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .tab-btn {
+    padding: 8px 18px;
+    font-size: 13px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .tab-btn:hover { color: var(--text); }
+
+  .tab-btn.active {
+    background: var(--accent);
+    color: #0a0a0a;
+  }
+
+  .tab-btn + .tab-btn { border-left: 1px solid var(--border); }
+
+  /* Range buttons */
+  .range-group {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .range-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .range-btn:hover { color: var(--text); }
+  .range-btn.active { color: var(--accent); background: var(--accent-dim); }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .stat-value.btc-color { color: var(--btc-color); }
+  .stat-value.bvol-color { color: var(--accent); }
+
+  /* Chart panels */
+  .chart-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+
+  .chart-panel.btc-panel { height: 340px; }
+  .chart-panel.bvol-panel { height: 220px; }
+
+  .chart-panel .panel-label {
+    position: absolute;
+    top: 12px;
+    left: 16px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    color: var(--text-dim);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .panel-label .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .panel-label .dot.btc { background: var(--btc-color); }
+  .panel-label .dot.bvol { background: var(--accent); }
+
+  .chart-panel canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Log scale toggle */
+  .log-toggle {
+    position: absolute;
+    top: 10px;
+    right: 16px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .log-toggle label {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+
+  .log-toggle input[type="checkbox"] {
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 20px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .footer .source {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.6;
+  }
+
+  .footer .updated {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Loading */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  .loading::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    margin-left: 10px;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Tooltip */
+  .chart-tooltip {
+    position: absolute;
+    display: none;
+    background: rgba(17, 17, 17, 0.95);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    pointer-events: none;
+    z-index: 100;
+    font-size: 12px;
+    backdrop-filter: blur(8px);
+  }
+
+  /* Guide */
+  .guide-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-top: 16px;
+  }
+
+  .guide-box summary {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .guide-box summary::-webkit-details-marker { display: none; }
+
+  .guide-box summary::before {
+    content: '▸';
+    margin-right: 8px;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .guide-box[open] summary::before { content: '▾'; }
+
+  .guide-content {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  .guide-content strong { color: var(--text); font-weight: 500; }
+  .guide-content code {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-size: 12px;
+  }
+
+  @media (max-width: 768px) {
+    .container { padding: 12px 10px 32px; }
+    .header { flex-direction: column; }
+    .header-right { width: 100%; justify-content: flex-start; }
+    .chart-panel.btc-panel { height: 280px; }
+    .chart-panel.bvol-panel { height: 180px; }
+    .stats-bar { gap: 8px; }
+    .stat-item { padding: 8px 12px; }
+    .stat-value { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Bitcoin Historical Volatility <span>.BVOL</span></h1>
+      <div class="subtitle">BitMEX 30-Day Annualized Historical Volatility Index</div>
+    </div>
+    <div class="header-right">
+      <div class="tab-group">
+        <button class="tab-btn active" data-tab="daily">일봉</button>
+        <button class="tab-btn" data-tab="weekly">주봉</button>
+      </div>
+      <div class="range-group">
+        <button class="range-btn" data-range="365">1Y</button>
+        <button class="range-btn" data-range="730">2Y</button>
+        <button class="range-btn active" data-range="1825">5Y</button>
+        <button class="range-btn" data-range="0">ALL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-label">BTC</span>
+      <span class="stat-value btc-color" id="stat-btc">-</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">BVOL</span>
+      <span class="stat-value bvol-color" id="stat-bvol">-</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">BVOL 평균</span>
+      <span class="stat-value" id="stat-bvol-avg" style="color:var(--text)">-</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">BVOL 구간</span>
+      <span class="stat-value" id="stat-bvol-zone" style="font-size:12px">-</span>
+    </div>
+  </div>
+
+  <!-- BTC Chart -->
+  <div class="chart-panel btc-panel">
+    <div class="panel-label"><span class="dot btc"></span>BTC / USD</div>
+    <div class="log-toggle">
+      <input type="checkbox" id="logScale" checked>
+      <label for="logScale">LOG</label>
+    </div>
+    <canvas id="btcChart"></canvas>
+    <div class="loading" id="btcLoading">데이터 로딩 중</div>
+  </div>
+
+  <!-- BVOL Chart -->
+  <div class="chart-panel bvol-panel">
+    <div class="panel-label"><span class="dot bvol"></span>.BVOL (30D Annualized)</div>
+    <canvas id="bvolChart"></canvas>
+    <div class="loading" id="bvolLoading">데이터 로딩 중</div>
+  </div>
+
+  <!-- Guide -->
+  <details class="guide-box">
+    <summary>BVOL 지표 해석 가이드</summary>
+    <div class="guide-content">
+      <strong>BVOL (Bitcoin Historical Volatility Index)</strong>은 BitMEX에서 산출하는 비트코인 30일 역사적 변동성 지수입니다.
+      S&P 500의 VIX와 유사한 역할을 합니다.<br><br>
+      <strong>산출 공식:</strong> <code>.BVOL = Stdev(Ln(P1/P0), ..., Ln(P30/P29)) × √365</code><br>
+      매일 11:30~12:00 UTC 구간의 1분 간격 TWAP(시간가중평균가격)을 사용합니다.<br><br>
+      <strong>해석:</strong><br>
+      · BVOL이 <strong>극도로 낮을 때</strong> → 변동성 압축 구간. 큰 방향성 움직임 직전일 가능성<br>
+      · BVOL이 <strong>급등할 때</strong> → 시장 패닉 또는 급격한 가격 변동 구간<br>
+      · BTC 가격 <strong>저점</strong>에서 BVOL이 고점을 찍고 하락 전환 → 바닥 시그널<br>
+      · BTC 가격 <strong>고점</strong>에서 BVOL이 저점 → 상승 종료 가능성<br><br>
+      <strong>핵심:</strong> BVOL은 방향이 아닌 <strong>변동성의 크기</strong>를 측정합니다.
+      방향 판단은 가격 구조와 함께 봐야 합니다.
+    </div>
+  </details>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="source">
+      BTC: BTC_USD.csv + BitMEX XBTUSD<br>
+      BVOL: BitMEX .BVOL (30-day annualized)
+    </div>
+    <div class="updated" id="updatedAt">-</div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ───
+let rawData = null;
+let btcChart = null;
+let bvolChart = null;
+let currentTab = 'daily';
+let currentRange = 1825;
+let isLogScale = true;
+
+// ─── Data Loading ───
+async function loadData() {
+  try {
+    const resp = await fetch('./data/bvol_data.json');
+    rawData = await resp.json();
+    hideLoading();
+    updateStats();
+    renderCharts();
+  } catch (e) {
+    console.error('Failed to load data:', e);
+    document.getElementById('btcLoading').textContent = '데이터를 불러올 수 없습니다';
+    document.getElementById('bvolLoading').textContent = '';
+  }
+}
+
+function hideLoading() {
+  document.getElementById('btcLoading').style.display = 'none';
+  document.getElementById('bvolLoading').style.display = 'none';
+}
+
+// ─── Data Processing ───
+function getFilteredData() {
+  if (!rawData) return { dates: [], btc: [], bvol: [] };
+
+  let dates = rawData.dates;
+  let btc = rawData.btc_close;
+  let bvol = rawData.bvol;
+
+  // Range filter
+  if (currentRange > 0) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - currentRange);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+    const startIdx = dates.findIndex(d => d >= cutoffStr);
+    if (startIdx > 0) {
+      dates = dates.slice(startIdx);
+      btc = btc.slice(startIdx);
+      bvol = bvol.slice(startIdx);
+    }
+  }
+
+  // Weekly aggregation
+  if (currentTab === 'weekly') {
+    return aggregateWeekly(dates, btc, bvol);
+  }
+
+  return { dates, btc, bvol };
+}
+
+function aggregateWeekly(dates, btc, bvol) {
+  const weeks = { dates: [], btc: [], bvol: [] };
+  let weekBtc = null, weekBvol = null, weekDate = null;
+
+  for (let i = 0; i < dates.length; i++) {
+    const d = new Date(dates[i]);
+    const dow = d.getDay();
+
+    weekDate = dates[i];
+    if (btc[i] != null) weekBtc = btc[i];
+    if (bvol[i] != null) weekBvol = bvol[i];
+
+    // End of week (Friday) or last data point
+    if (dow === 5 || i === dates.length - 1) {
+      weeks.dates.push(weekDate);
+      weeks.btc.push(weekBtc);
+      weeks.bvol.push(weekBvol);
+      weekBtc = null;
+      weekBvol = null;
+      weekDate = null;
+    }
+  }
+
+  return weeks;
+}
+
+// ─── Stats ───
+function updateStats() {
+  if (!rawData) return;
+
+  const btc = rawData.btc_close;
+  const bvol = rawData.bvol;
+
+  // Latest values
+  let latestBtc = null, latestBvol = null;
+  for (let i = btc.length - 1; i >= 0; i--) {
+    if (latestBtc == null && btc[i] != null) latestBtc = btc[i];
+    if (latestBvol == null && bvol[i] != null) latestBvol = bvol[i];
+    if (latestBtc != null && latestBvol != null) break;
+  }
+
+  document.getElementById('stat-btc').textContent =
+    latestBtc ? '$' + latestBtc.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-';
+  document.getElementById('stat-bvol').textContent =
+    latestBvol != null ? latestBvol.toFixed(2) + '%' : '-';
+
+  // Average BVOL (1 year)
+  const recentBvol = bvol.slice(-365).filter(v => v != null);
+  const avg = recentBvol.length ? recentBvol.reduce((a, b) => a + b, 0) / recentBvol.length : 0;
+  document.getElementById('stat-bvol-avg').textContent = avg.toFixed(2) + '%';
+
+  // Zone
+  const zoneEl = document.getElementById('stat-bvol-zone');
+  if (latestBvol != null) {
+    if (latestBvol < 30) {
+      zoneEl.textContent = '🟢 저변동';
+      zoneEl.style.color = '#00d4aa';
+    } else if (latestBvol < 60) {
+      zoneEl.textContent = '🟡 보통';
+      zoneEl.style.color = '#ffd700';
+    } else if (latestBvol < 90) {
+      zoneEl.textContent = '🟠 고변동';
+      zoneEl.style.color = '#ff8c00';
+    } else {
+      zoneEl.textContent = '🔴 극단적';
+      zoneEl.style.color = '#ff4976';
+    }
+  }
+
+  // Updated time
+  if (rawData.updated_at) {
+    const d = new Date(rawData.updated_at);
+    document.getElementById('updatedAt').textContent =
+      `업데이트: ${d.toLocaleDateString('ko-KR')} ${d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+}
+
+// ─── Chart Rendering ───
+function renderCharts() {
+  const data = getFilteredData();
+  renderBtcChart(data);
+  renderBvolChart(data);
+}
+
+function renderBtcChart(data) {
+  const ctx = document.getElementById('btcChart').getContext('2d');
+
+  if (btcChart) btcChart.destroy();
+
+  const points = data.dates.map((d, i) => ({
+    x: d,
+    y: data.btc[i]
+  })).filter(p => p.y != null);
+
+  // Gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, 'rgba(247, 147, 26, 0.12)');
+  gradient.addColorStop(1, 'rgba(247, 147, 26, 0.0)');
+
+  btcChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [{
+        data: points,
+        borderColor: '#f7931a',
+        borderWidth: 1.5,
+        backgroundColor: gradient,
+        fill: true,
+        pointRadius: 0,
+        pointHitRadius: 6,
+        tension: 0.1,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(17,17,17,0.95)',
+          borderColor: '#333',
+          borderWidth: 1,
+          titleFont: { family: "'JetBrains Mono', monospace", size: 11 },
+          bodyFont: { family: "'JetBrains Mono', monospace", size: 12 },
+          titleColor: '#888',
+          bodyColor: '#f7931a',
+          padding: 10,
+          cornerRadius: 6,
+          displayColors: false,
+          callbacks: {
+            label: (ctx) => 'BTC $' + ctx.parsed.y.toLocaleString('en-US', { maximumFractionDigits: 0 })
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            unit: currentRange <= 730 ? 'month' : 'year',
+            displayFormats: { month: 'yyyy-MM', year: 'yyyy' }
+          },
+          grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+          ticks: {
+            font: { family: "'JetBrains Mono', monospace", size: 10 },
+            color: '#555',
+            maxTicksLimit: 10,
+          },
+          border: { display: false }
+        },
+        y: {
+          type: isLogScale ? 'logarithmic' : 'linear',
+          position: 'right',
+          grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+          ticks: {
+            font: { family: "'JetBrains Mono', monospace", size: 10 },
+            color: '#555',
+            callback: (v) => {
+              if (v >= 1000) return '$' + (v / 1000).toFixed(0) + 'K';
+              return '$' + v;
+            },
+            maxTicksLimit: 6,
+          },
+          border: { display: false }
+        }
+      }
+    }
+  });
+}
+
+function renderBvolChart(data) {
+  const ctx = document.getElementById('bvolChart').getContext('2d');
+
+  if (bvolChart) bvolChart.destroy();
+
+  const points = data.dates.map((d, i) => ({
+    x: d,
+    y: data.bvol[i]
+  })).filter(p => p.y != null);
+
+  // Average line
+  const avg = points.length ? points.reduce((s, p) => s + p.y, 0) / points.length : 0;
+
+  // Gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, 180);
+  gradient.addColorStop(0, 'rgba(0, 212, 170, 0.15)');
+  gradient.addColorStop(1, 'rgba(0, 212, 170, 0.0)');
+
+  bvolChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [
+        {
+          label: 'BVOL',
+          data: points,
+          borderColor: '#00d4aa',
+          borderWidth: 1.5,
+          backgroundColor: gradient,
+          fill: true,
+          pointRadius: 0,
+          pointHitRadius: 6,
+          tension: 0.1,
+        },
+        {
+          label: 'AVG',
+          data: points.map(p => ({ x: p.x, y: avg })),
+          borderColor: 'rgba(255,255,255,0.15)',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          pointHitRadius: 0,
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(17,17,17,0.95)',
+          borderColor: '#333',
+          borderWidth: 1,
+          titleFont: { family: "'JetBrains Mono', monospace", size: 11 },
+          bodyFont: { family: "'JetBrains Mono', monospace", size: 12 },
+          titleColor: '#888',
+          bodyColor: '#00d4aa',
+          padding: 10,
+          cornerRadius: 6,
+          displayColors: false,
+          filter: (item) => item.datasetIndex === 0,
+          callbacks: {
+            label: (ctx) => 'BVOL ' + ctx.parsed.y.toFixed(2) + '%'
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            unit: currentRange <= 730 ? 'month' : 'year',
+            displayFormats: { month: 'yyyy-MM', year: 'yyyy' }
+          },
+          grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+          ticks: {
+            font: { family: "'JetBrains Mono', monospace", size: 10 },
+            color: '#555',
+            maxTicksLimit: 10,
+          },
+          border: { display: false }
+        },
+        y: {
+          position: 'right',
+          min: 0,
+          grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+          ticks: {
+            font: { family: "'JetBrains Mono', monospace", size: 10 },
+            color: '#555',
+            callback: (v) => v + '%',
+            maxTicksLimit: 5,
+          },
+          border: { display: false }
+        }
+      }
+    }
+  });
+}
+
+// ─── Crosshair sync ───
+function setupCrosshairSync() {
+  const btcCanvas = document.getElementById('btcChart');
+  const bvolCanvas = document.getElementById('bvolChart');
+
+  function syncTooltip(sourceChart, targetChart, e) {
+    if (!sourceChart || !targetChart) return;
+    const rect = sourceChart.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const xPercent = x / rect.width;
+
+    const targetRect = targetChart.canvas.getBoundingClientRect();
+    const targetX = xPercent * targetRect.width;
+
+    targetChart.setActiveElements([]);
+    targetChart.tooltip.setActiveElements(
+      targetChart.getElementsAtEventForMode(
+        { x: targetX, y: targetRect.height / 2 },
+        'index', { intersect: false }, false
+      ),
+      { x: targetX, y: targetRect.height / 2 }
+    );
+    targetChart.update('none');
+  }
+
+  btcCanvas.addEventListener('mousemove', (e) => syncTooltip(btcChart, bvolChart, e));
+  bvolCanvas.addEventListener('mousemove', (e) => syncTooltip(bvolChart, btcChart, e));
+}
+
+// ─── Event Listeners ───
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    renderCharts();
+  });
+});
+
+document.querySelectorAll('.range-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRange = parseInt(btn.dataset.range);
+    renderCharts();
+  });
+});
+
+document.getElementById('logScale').addEventListener('change', (e) => {
+  isLogScale = e.target.checked;
+  renderCharts();
+});
+
+// ─── postMessage height (HerdVibe iframe) ───
+function postHeight() {
+  const height = document.documentElement.scrollHeight;
+  window.parent.postMessage({ type: 'herdvibe-height', height }, '*');
+}
+
+// ─── Init ───
+loadData().then(() => {
+  setupCrosshairSync();
+  postHeight();
+  window.addEventListener('resize', postHeight);
+});
+</script>
+</body>
+</html>
